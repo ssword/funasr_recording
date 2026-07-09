@@ -1,4 +1,4 @@
-"""Main application window — orchestrates state machine, audio, ASR, and UI."""
+"""Main application window — cyberpunk HUD orchestrating state, audio, ASR, UI."""
 
 import logging
 import os
@@ -9,12 +9,11 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QPushButton,
-    QTextEdit,
     QStatusBar,
     QMessageBox,
     QLabel,
     QSizePolicy,
+    QSpacerItem,
 )
 
 from src.config import AppConfig
@@ -23,10 +22,12 @@ from src.state_machine import SessionState, StateMachine
 from src.asr.client import AsrClient
 from src.audio.worker import AudioWorker
 from src.ui.waveform import WaveformWidget
+from src.ui.button import NeonButton, ButtonVisualState
+from src.ui.glass_panel import GlassPanel
+from src.ui.particles import ParticleOverlay
 
 logger = logging.getLogger(__name__)
 
-# Error messages per spec
 _ERROR_MESSAGES = {
     "ws_fail": "无法连接语音服务，请确认服务已启动",
     "ws_disconnect": "语音服务连接中断，请重试",
@@ -38,7 +39,7 @@ _ERROR_MESSAGES = {
 
 
 class MainWindow(QMainWindow):
-    """Single-window recording + transcription application."""
+    """Cyberpunk HUD recording + transcription application window."""
 
     def __init__(
         self,
@@ -50,9 +51,9 @@ class MainWindow(QMainWindow):
         self._db = db or self._make_db()
 
         self.setWindowTitle("录音转写")
-        self.resize(480, 600)
+        self.resize(720, 900)
 
-        # ── Core components ────────────────────────────────────────────────
+        # ── Core components ────────────────────────────────────────────
         self._state_machine = StateMachine(self)
         self._asr_client = AsrClient(self)
         self._asr_client.set_url(self._config.ws_url)
@@ -66,7 +67,7 @@ class MainWindow(QMainWindow):
         self._timer: QTimer | None = None
         self._elapsed_seconds = 0
 
-        # ── UI setup ───────────────────────────────────────────────────────
+        # ── UI setup ───────────────────────────────────────────────────
         self._setup_ui()
         self._connect_signals()
 
@@ -79,67 +80,62 @@ class MainWindow(QMainWindow):
         db.initialize()
         return db
 
-    # ── UI ─────────────────────────────────────────────────────────────────
+    # ── UI Construction ─────────────────────────────────────────────────
 
     def _setup_ui(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
+
+        # Base layout
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        # Waveform
+        # Particle overlay — full window, behind everything interactive
+        self._particles = ParticleOverlay(central)
+        self._particles.setGeometry(0, 0, 720, 900)
+
+        # Content container (positioned above particles in z-order)
+        content = QWidget(central)
+        content.setAttribute(Qt.WA_TranslucentBackground)  # type: ignore[attr-defined]
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(32, 32, 32, 32)
+        content_layout.setSpacing(0)
+
+        # ── Waveform (top, largest area) ───────────────────────────────
         self._waveform = WaveformWidget()
-        self._waveform.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # type: ignore[attr-defined]
-        self._waveform.setFixedHeight(100)
-        layout.addWidget(self._waveform)
+        self._waveform.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # type: ignore[attr-defined]
+        self._waveform.setMinimumHeight(220)
+        content_layout.addWidget(self._waveform)
 
-        # Record button
-        self._button = QPushButton("请按按钮开始录音")
-        self._button.setMinimumHeight(48)
-        self._button.setStyleSheet("""
-            QPushButton {
-                background-color: #00ff88;
-                color: #111;
-                border: none;
-                border-radius: 24px;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 12px 24px;
-            }
-            QPushButton:pressed {
-                background-color: #00cc6a;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """)
+        content_layout.addSpacing(16)
+
+        # ── Button (center, anchored) ──────────────────────────────────
+        btn_container = QWidget()
+        btn_layout = QVBoxLayout(btn_container)
+        btn_layout.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
+        self._button = NeonButton()
+        self._button.setText("录音")
         self._button.clicked.connect(self._on_button_clicked)
-        layout.addWidget(self._button)
+        btn_layout.addWidget(self._button)
+        content_layout.addWidget(btn_container)
 
-        # Live transcription
-        self._live_text = QTextEdit()
-        self._live_text.setReadOnly(True)
-        self._live_text.setPlaceholderText("实时转写将在此显示…")
-        self._live_text.setStyleSheet("color: #aaa; background: #1a1a1a;")
-        self._live_text.setMinimumHeight(80)
-        layout.addWidget(self._live_text)
+        content_layout.addSpacing(16)
 
-        # Offline transcription
-        self._offline_text = QTextEdit()
-        self._offline_text.setReadOnly(True)
-        self._offline_text.setPlaceholderText("离线转写结果将在此显示…")
-        self._offline_text.setStyleSheet("color: #777; background: #1a1a1a;")
-        self._offline_text.setMinimumHeight(80)
-        layout.addWidget(self._offline_text)
+        # ── Glass panel (bottom text area) ─────────────────────────────
+        self._glass = GlassPanel()
+        self._glass.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # type: ignore[attr-defined]
+        self._glass.setMinimumHeight(220)
+        content_layout.addWidget(self._glass)
 
-        # Status bar
+        # ── Status bar ─────────────────────────────────────────────────
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
         self._status_label = QLabel("就绪")
+        self._status_label.setStyleSheet("color: #666; font-size: 11px;")
         self._status_bar.addWidget(self._status_label)
         self._time_label = QLabel("")
+        self._time_label.setStyleSheet("color: #00ff8866; font-size: 13px; font-weight: bold;")
         self._status_bar.addPermanentWidget(self._time_label)
 
     def _connect_signals(self) -> None:
@@ -159,16 +155,25 @@ class MainWindow(QMainWindow):
         worker.device_error.connect(lambda msg: self._handle_error("device_error"))
         worker.disk_error.connect(lambda msg: self._handle_error("disk_full"))
 
-    # ── Button handler ─────────────────────────────────────────────────────
+    # ── Resize ─────────────────────────────────────────────────────────
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._particles.setGeometry(0, 0, self.width(), self.height())
+
+    # ── Button handler ─────────────────────────────────────────────────
 
     def _on_button_clicked(self) -> None:
+        # Particle burst at button center (map to particle overlay coords)
+        btn_pos = self._button.mapTo(self._particles, self._button.rect().center())
+        self._particles.burst(btn_pos.x(), btn_pos.y())
+
         state = self._state_machine.state
         if state == SessionState.IDLE:
-            # Check microphone permission
             from PySide6.QtMultimedia import QMediaDevices
             device = QMediaDevices.defaultAudioInput()
             if device.isNull():
-                self._show_error_in_ui("请授予麦克风权限")
+                self._glass.show_error("请授予麦克风权限")
                 self._button.setEnabled(False)
                 self._status_label.setText("麦克风不可用")
                 return
@@ -176,23 +181,19 @@ class MainWindow(QMainWindow):
             self._start_session()
             self._state_machine.transition("click")
             self._asr_client.connect_to_server()
-        elif state == SessionState.CONNECTING:
-            pass  # button does nothing while connecting
         elif state == SessionState.RECORDING:
             self._state_machine.transition("click")
             self._audio_worker.stop_recording()
             self._asr_client.send_stop()
-        elif state == SessionState.PROCESSING:
-            pass  # button does nothing while processing
         elif state == SessionState.ERROR:
+            self._glass.clear()
             self._state_machine.transition("click")
 
     def _start_session(self) -> None:
         session = self._db.create_session()
         self._session_id = session["id"]
         self._db.insert_log(self._session_id, "INFO", "Session started")
-        self._live_text.clear()
-        self._offline_text.clear()
+        self._glass.clear()
         self._start_timer()
         self._audio_worker.start_recording(self._session_id)
 
@@ -209,29 +210,44 @@ class MainWindow(QMainWindow):
         m, s = divmod(self._elapsed_seconds, 60)
         self._time_label.setText(f"{m:02d}:{s:02d}")
 
-    # ── State change handler ───────────────────────────────────────────────
+    # ── State change handler ───────────────────────────────────────────
 
     def _on_state_changed(self, state: SessionState, trigger: str) -> None:
+        vis = NeonButton.state_to_visual(state)
+        self._button.set_visual_state(vis)
+        # Short labels for round button; longer spec text on hover tooltip
+        short_labels = {
+            SessionState.IDLE: "录音",
+            SessionState.CONNECTING: "…",
+            SessionState.RECORDING: "停止",
+            SessionState.PROCESSING: "…",
+            SessionState.ERROR: "重试",
+        }
+        self._button.setText(short_labels.get(state, ""))
+        self._button.setToolTip(self._state_machine.button_text)
         self._waveform.set_state(state)
-        self._button.setText(self._state_machine.button_text)
+        self._particles.set_state(state)
 
         if state == SessionState.CONNECTING:
             self._status_label.setText("正在连接语音服务…")
         elif state == SessionState.RECORDING:
-            self._status_label.setText("录音中")
+            self._status_label.setText("● 录音中")
+            self._status_label.setStyleSheet("color: #ff3355; font-size: 11px;")
         elif state == SessionState.PROCESSING:
-            self._status_label.setText("正在处理转写…")
+            self._status_label.setText("◉ 处理中…")
+            self._status_label.setStyleSheet("color: #ffaa00; font-size: 11px;")
             if self._timer:
                 self._timer.stop()
             self._on_recording_finished()
         elif state == SessionState.IDLE:
             self._status_label.setText("就绪")
+            self._status_label.setStyleSheet("color: #666; font-size: 11px;")
             self._time_label.setText("")
         elif state == SessionState.ERROR:
-            self._status_label.setText("错误")
+            self._status_label.setText("✕ 错误")
+            self._status_label.setStyleSheet("color: #ff4444; font-size: 11px;")
 
     def _on_ws_disconnected(self) -> None:
-        """Handle unexpected WebSocket disconnection."""
         if self._state_machine.state in (
             SessionState.RECORDING,
             SessionState.PROCESSING,
@@ -239,7 +255,6 @@ class MainWindow(QMainWindow):
             self._handle_error("ws_disconnect")
 
     def _on_recording_finished(self) -> None:
-        """Called when entering Processing state."""
         if self._session_id is not None:
             self._db.update_status(self._session_id, "completed")
             wav_path = self._audio_worker.wav_path
@@ -247,12 +262,12 @@ class MainWindow(QMainWindow):
                 self._db.update_wav_path(self._session_id, wav_path)
 
     def _on_partial_result(self, text: str) -> None:
-        self._live_text.setPlainText(text)
+        self._glass.set_live_text(text)
         if self._session_id is not None:
             self._db.update_live_text(self._session_id, text)
 
     def _on_final_result(self, text: str) -> None:
-        self._offline_text.setPlainText(text)
+        self._glass.set_offline_text(text)
         if self._session_id is not None:
             self._db.update_offline_text(self._session_id, text)
         self._state_machine.transition("final_result")
@@ -267,14 +282,9 @@ class MainWindow(QMainWindow):
             self._db.insert_log(self._session_id, "ERROR", message)
 
         self._state_machine.transition(error_type)
-        self._live_text.clear()
+        self._glass.clear()
 
-    # ── Close protection ───────────────────────────────────────────────────
-
-    def _show_error_in_ui(self, message: str) -> None:
-        """Display an error message in the live text area."""
-        self._live_text.setPlainText(message)
-        self._live_text.setStyleSheet("color: #ff4444; background: #1a1a1a;")
+    # ── Close protection ───────────────────────────────────────────────
 
     def closeEvent(self, event) -> None:
         if self._state_machine.state == SessionState.RECORDING:
@@ -289,7 +299,6 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
 
-        # Cleanup
         if self._asr_client:
             self._asr_client.disconnect_from_server()
         if self._timer:

@@ -31,20 +31,22 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("录音转写")
 
-    # Dark palette
+    # Cyberpunk dark theme
     app.setStyleSheet("""
-        QMainWindow, QWidget {
-            background-color: #111;
+        QMainWindow {
+            background-color: #0a0c0d;
+        }
+        QWidget {
+            background-color: #0a0c0d;
             color: #eee;
         }
-        QTextEdit {
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 8px;
-        }
         QStatusBar {
-            background-color: #1a1a1a;
-            color: #888;
+            background-color: #0d0f10;
+            color: #666;
+            border-top: 1px solid #1a1c1e;
+        }
+        QStatusBar::item {
+            border: none;
         }
     """)
 
