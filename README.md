@@ -58,7 +58,8 @@ Idle ──click──▶ Connecting ──ws_ok──▶ Recording ──click�
 ## Prerequisites
 
 - **Python 3.12+**
-- **Docker** (for running the FunASR server)
+- **[uv](https://docs.astral.sh/uv/)** — Python package and environment manager
+- **Docker** — for running the FunASR server
 - **macOS / Windows / Linux** with a working microphone
 
 ## Quick Start
@@ -73,18 +74,18 @@ This pulls and runs the FunASR runtime SDK image, exposing WebSocket on `ws://lo
 
 > **Note:** The Docker image is ~6 GB. Ensure you have sufficient disk space and a stable network connection.
 
-### 2. Install Python Dependencies
+### 2. Install Dependencies
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 ```
+
+This creates a virtual environment and installs all runtime and dev dependencies.
 
 ### 3. Run the Application
 
 ```bash
-python -m src.main
+uv run python -m src.main
 ```
 
 ### 4. Use the App
@@ -195,19 +196,19 @@ Recordings are saved incrementally as 16kHz mono 16-bit PCM WAV files:
 
 ```bash
 # Run all tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run a specific test seam
-pytest tests/test_state_machine.py -v
-pytest tests/test_database.py -v
-pytest tests/test_chunker.py -v
-pytest tests/test_protocol.py -v
+uv run pytest tests/test_state_machine.py -v
+uv run pytest tests/test_database.py -v
+uv run pytest tests/test_chunker.py -v
+uv run pytest tests/test_protocol.py -v
 ```
 
 ### Type Checking
 
 ```bash
-mypy src/ --ignore-missing-imports
+uv run mypy src/ --ignore-missing-imports
 ```
 
 ### Test Philosophy
