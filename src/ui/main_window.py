@@ -173,8 +173,8 @@ class MainWindow(QMainWindow):
     # ── Button handler ─────────────────────────────────────────────────
 
     def _on_button_clicked(self) -> None:
-        # Particle burst at button center (map to particle overlay coords)
-        btn_pos = self._button.mapTo(self._particles, self._button.rect().center())
+        # Particle burst at button center — map through centralWidget (common ancestor)
+        btn_pos = self._button.mapTo(self.centralWidget(), self._button.rect().center())
         self._particles.burst(btn_pos.x(), btn_pos.y())
 
         state = self._state_machine.state

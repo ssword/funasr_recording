@@ -3,6 +3,7 @@
 import logging
 
 from PySide6.QtCore import QObject, Signal, QUrl
+from PySide6.QtNetwork import QAbstractSocket
 from PySide6.QtWebSockets import QWebSocket
 
 from src.asr.protocol import (
@@ -62,13 +63,13 @@ class AsrClient(QObject):
 
     def send_audio(self, chunk: bytes) -> None:
         """Send a raw PCM audio chunk to the server."""
-        if self._ws and self._ws.state() == QWebSocket.ConnectedState:  # type: ignore[attr-defined]
+        if self._ws and self._ws.state() == QAbstractSocket.ConnectedState:  # type: ignore[attr-defined]
             msg = encode_audio_message(chunk)
             self._ws.sendTextMessage(msg)
 
     def send_stop(self) -> None:
         """Tell the server to finalize and return offline result."""
-        if self._ws and self._ws.state() == QWebSocket.ConnectedState:  # type: ignore[attr-defined]
+        if self._ws and self._ws.state() == QAbstractSocket.ConnectedState:  # type: ignore[attr-defined]
             msg = encode_control_message("stop")
             self._ws.sendTextMessage(msg)
 
