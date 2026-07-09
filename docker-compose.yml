@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  funasr:
+    image: registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-online-cpu-0.1.10
+    container_name: funasr-asr
+    ports:
+      - "10095:10095"
+    restart: unless-stopped
