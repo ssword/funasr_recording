@@ -26,6 +26,8 @@ class GlassPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(200)
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("background: transparent;")
 
         self._edge_glow = 0.0
         self._glow_timer = QTimer(self)

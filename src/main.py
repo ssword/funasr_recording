@@ -31,12 +31,9 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("录音转写")
 
-    # Cyberpunk dark theme
+    # Cyberpunk dark theme — only style containers, never custom-painted widgets
     app.setStyleSheet("""
         QMainWindow {
-            background-color: #0a0c0d;
-        }
-        QWidget {
             background-color: #0a0c0d;
             color: #eee;
         }

@@ -68,6 +68,8 @@ class ParticleOverlay(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)  # type: ignore[attr-defined]
         self.setAttribute(Qt.WA_TranslucentBackground)  # type: ignore[attr-defined]
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("background: transparent;")
         self._particles: list[Particle] = []
         self._state = SessionState.IDLE
         self._max_particles = _MAX_PARTICLES_IDLE

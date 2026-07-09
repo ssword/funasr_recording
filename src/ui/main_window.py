@@ -98,6 +98,8 @@ class MainWindow(QMainWindow):
         # Content container (positioned above particles in z-order)
         content = QWidget(central)
         content.setAttribute(Qt.WA_TranslucentBackground)  # type: ignore[attr-defined]
+        content.setAutoFillBackground(False)
+        content.setStyleSheet("background: transparent;")
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(32, 32, 32, 32)
         content_layout.setSpacing(0)

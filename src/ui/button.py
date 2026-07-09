@@ -58,6 +58,9 @@ class NeonButton(QPushButton):
         super().__init__(parent)
         self.setFixedSize(_BUTTON_RADIUS * 2 + 40, _BUTTON_RADIUS * 2 + 40)
         self.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
+        # Disable stylesheet background — we paint everything ourselves
+        self.setAttribute(Qt.WA_StyledBackground, False)  # type: ignore[attr-defined]
+        self.setStyleSheet("background: transparent; border: none;")
 
         self._visual_state = ButtonVisualState.IDLE
         self._pulse_phase = 0.0

@@ -27,6 +27,8 @@ class WaveformWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(180)
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("background: transparent;")
         self._history: deque[float] = deque([0.0] * _HISTORY_SIZE, maxlen=_HISTORY_SIZE)
         self._state = SessionState.IDLE
 
