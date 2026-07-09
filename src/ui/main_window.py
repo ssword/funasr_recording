@@ -84,6 +84,8 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         central = QWidget()
+        central.setAutoFillBackground(False)
+        central.setStyleSheet("background: #0a0c0d;")
         self.setCentralWidget(central)
 
         # Base layout
@@ -114,6 +116,7 @@ class MainWindow(QMainWindow):
 
         # ── Button (center, anchored) ──────────────────────────────────
         btn_container = QWidget()
+        btn_container.setStyleSheet("background: transparent;")
         btn_layout = QVBoxLayout(btn_container)
         btn_layout.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
         self._button = NeonButton()
@@ -129,6 +132,10 @@ class MainWindow(QMainWindow):
         self._glass.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # type: ignore[attr-defined]
         self._glass.setMinimumHeight(220)
         content_layout.addWidget(self._glass)
+
+        # Add content to main layout so it gets actual size
+        layout.addWidget(content)
+        content.raise_()  # ensure above particles in z-order
 
         # ── Status bar ─────────────────────────────────────────────────
         self._status_bar = QStatusBar()
