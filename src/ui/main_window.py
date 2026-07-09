@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
 
         asr = self._asr_client
         asr.connected.connect(lambda: sm.transition("ws_ok"))
+        asr.disconnected.connect(self._on_ws_disconnected)
         asr.partial_result.connect(self._on_partial_result)
         asr.final_result.connect(self._on_final_result)
         asr.error.connect(lambda msg: self._handle_error("ws_fail"))
@@ -167,8 +168,11 @@ class MainWindow(QMainWindow):
             from PySide6.QtMultimedia import QMediaDevices
             device = QMediaDevices.defaultAudioInput()
             if device.isNull():
-                self._handle_error("mic_denied")
+                self._show_error_in_ui("请授予麦克风权限")
+                self._button.setEnabled(False)
+                self._status_label.setText("麦克风不可用")
                 return
+            self._button.setEnabled(True)
             self._start_session()
             self._state_machine.transition("click")
             self._asr_client.connect_to_server()
@@ -190,7 +194,7 @@ class MainWindow(QMainWindow):
         self._live_text.clear()
         self._offline_text.clear()
         self._start_timer()
-        self._audio_worker.start_recording()
+        self._audio_worker.start_recording(self._session_id)
 
     def _start_timer(self) -> None:
         self._elapsed_seconds = 0
@@ -226,6 +230,14 @@ class MainWindow(QMainWindow):
         elif state == SessionState.ERROR:
             self._status_label.setText("错误")
 
+    def _on_ws_disconnected(self) -> None:
+        """Handle unexpected WebSocket disconnection."""
+        if self._state_machine.state in (
+            SessionState.RECORDING,
+            SessionState.PROCESSING,
+        ):
+            self._handle_error("ws_disconnect")
+
     def _on_recording_finished(self) -> None:
         """Called when entering Processing state."""
         if self._session_id is not None:
@@ -258,6 +270,11 @@ class MainWindow(QMainWindow):
         self._live_text.clear()
 
     # ── Close protection ───────────────────────────────────────────────────
+
+    def _show_error_in_ui(self, message: str) -> None:
+        """Display an error message in the live text area."""
+        self._live_text.setPlainText(message)
+        self._live_text.setStyleSheet("color: #ff4444; background: #1a1a1a;")
 
     def closeEvent(self, event) -> None:
         if self._state_machine.state == SessionState.RECORDING:

@@ -56,22 +56,18 @@ class AudioWorker(QObject):
         self._wav_file: wave.Wave_write | None = None
         self._wav_path: str = ""
 
-    def start_recording(self) -> None:
+    def start_recording(self, session_id: int) -> None:
         """Begin audio capture from the default microphone."""
         sample_rate = self._config.sample_rate
         chunk_ms = self._config.chunk_duration_ms
         recordings_dir = self._config.recordings_dir
 
-        # Prepare WAV file path
+        # Prepare WAV file path: ./recordings/{YYYY-MM-DD}/{session_id}.wav
         date_dir = datetime.now().strftime("%Y-%m-%d")
         wav_dir = os.path.join(recordings_dir, date_dir)
         os.makedirs(wav_dir, exist_ok=True)
 
-        # Use a simple counter-based filename to avoid conflicts;
-        # the session id will be associated later.
-        import time
-        filename = f"{int(time.time() * 1000)}.wav"
-        self._wav_path = os.path.join(wav_dir, filename)
+        self._wav_path = os.path.join(wav_dir, f"{session_id}.wav")
 
         fmt = _make_audio_format(sample_rate)
         device = QMediaDevices.defaultAudioInput()
