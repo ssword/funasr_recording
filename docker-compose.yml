@@ -1,9 +1,24 @@
-version: "3.8"
-
 services:
   funasr:
     image: registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-online-cpu-0.1.10
     container_name: funasr-asr
     ports:
       - "10095:10095"
+    volumes:
+      - funasr_models:/workspace/models
+    command: >
+      /workspace/FunASR/runtime/websocket/build/bin/funasr-wss-server
+      --download-model-dir /workspace/models
+      --model-dir damo/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx
+      --vad-dir damo/speech_fsmn_vad_zh-cn-16k-common-onnx
+      --punc-dir damo/punc_ct-transformer_cn-en-common-vocab471067-large-onnx
+      --itn-dir thuduj12/fst_itn_zh
+      --lm-dir damo/speech_ngram_lm_zh-cn-ai-wesp-fst
+      --decoder-thread-num 4
+      --model-thread-num 1
+      --io-thread-num 4
+      --port 10095
     restart: unless-stopped
+
+volumes:
+  funasr_models:

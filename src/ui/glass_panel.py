@@ -131,7 +131,7 @@ class GlassPanel(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)  # type: ignore[attr-defined]
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
 
         # ── Glass background ──────────────────────────────────────────
@@ -139,7 +139,7 @@ class GlassPanel(QWidget):
         bg_gradient.setColorAt(0, QColor(15, 18, 20, 220))
         bg_gradient.setColorAt(0.5, QColor(10, 12, 14, 230))
         bg_gradient.setColorAt(1, QColor(15, 18, 20, 220))
-        painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(bg_gradient))
         painter.drawRoundedRect(QRectF(0, 0, w, h), 12, 12)
 
@@ -147,7 +147,7 @@ class GlassPanel(QWidget):
         glow_alpha = int(self._edge_glow * 120)
         glow_pen = QPen(QColor(0, 255, 136, glow_alpha), 1.5)
         painter.setPen(glow_pen)
-        painter.setBrush(Qt.NoBrush)  # type: ignore[attr-defined]
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(QRectF(1, 1, w - 2, h - 2), 12, 12)
 
         # ── Hairline divider ──────────────────────────────────────────

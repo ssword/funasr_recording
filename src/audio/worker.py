@@ -22,7 +22,7 @@ def _make_audio_format(sample_rate: int) -> QAudioFormat:
     fmt = QAudioFormat()
     fmt.setSampleRate(sample_rate)
     fmt.setChannelCount(1)
-    fmt.setSampleFormat(QAudioFormat.Int16)  # type: ignore[attr-defined]
+    fmt.setSampleFormat(QAudioFormat.SampleFormat.Int16)
     return fmt
 
 

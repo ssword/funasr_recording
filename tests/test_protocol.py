@@ -1,11 +1,12 @@
 """Tests for the FunASR WebSocket protocol — message encoding and parsing."""
 
 import json
-import pytest
 
 from src.asr.protocol import (
     encode_audio_message,
     encode_control_message,
+    encode_start_message,
+    encode_stop_message,
     parse_response,
     is_partial_result,
     is_final_result,
@@ -17,30 +18,40 @@ class TestOutgoingMessages:
     """Verify outgoing message structure matches FunASR WebSocket protocol."""
 
     def test_encode_control_message_start(self):
-        msg = encode_control_message("start")
+        msg = encode_control_message("start", sample_rate=16000)
         parsed = json.loads(msg)
-        assert parsed["type"] == "control"
-        assert parsed["action"] == "start"
+        assert parsed["mode"] == "2pass"
+        assert parsed["chunk_size"] == [5, 10, 5]
+        assert parsed["chunk_interval"] == 10
+        assert parsed["audio_fs"] == 16000
+        assert parsed["wav_name"] == "microphone"
+        assert parsed["wav_format"] == "pcm"
+        assert parsed["is_speaking"] is True
+        assert parsed["itn"] is True
 
     def test_encode_control_message_stop(self):
         msg = encode_control_message("stop")
         parsed = json.loads(msg)
-        assert parsed["type"] == "control"
-        assert parsed["action"] == "stop"
+        assert parsed["is_speaking"] is False
 
-    def test_encode_audio_message_contains_base64(self):
-        import base64
+    def test_encode_start_message_allows_custom_sample_rate(self):
+        msg = encode_start_message(sample_rate=8000)
+        parsed = json.loads(msg)
+        assert parsed["audio_fs"] == 8000
+
+    def test_encode_stop_message(self):
+        msg = encode_stop_message()
+        parsed = json.loads(msg)
+        assert parsed == {"is_speaking": False}
+
+    def test_encode_audio_message_returns_binary_pcm(self):
         audio_bytes = b"\x00\x01\x02\x03"
         msg = encode_audio_message(audio_bytes)
-        parsed = json.loads(msg)
-        assert parsed["type"] == "audio"
-        assert parsed["data"] == base64.b64encode(audio_bytes).decode("ascii")
+        assert msg == audio_bytes
 
     def test_encode_audio_message_empty_chunk(self):
         msg = encode_audio_message(b"")
-        parsed = json.loads(msg)
-        assert parsed["type"] == "audio"
-        assert parsed["data"] == ""
+        assert msg == b""
 
 
 class TestIncomingMessages:
@@ -48,22 +59,31 @@ class TestIncomingMessages:
 
     def test_parse_partial_response(self):
         raw = json.dumps({
-            "type": "result",
+            "mode": "2pass-online",
             "text": "你好",
-            "is_final": False,
         })
         result = parse_response(raw)
         assert result["text"] == "你好"
         assert result["is_final"] is False
+        assert result["mode"] == "2pass-online"
 
     def test_parse_final_response(self):
         raw = json.dumps({
-            "type": "result",
+            "mode": "2pass-offline",
             "text": "你好，世界。",
-            "is_final": True,
         })
         result = parse_response(raw)
         assert result["text"] == "你好，世界。"
+        assert result["is_final"] is True
+
+    def test_parse_explicit_final_response(self):
+        raw = json.dumps({
+            "mode": "offline",
+            "text": "最终文本",
+            "is_final": True,
+        })
+        result = parse_response(raw)
+        assert result["text"] == "最终文本"
         assert result["is_final"] is True
 
     def test_partial_result_detection(self):
@@ -87,6 +107,6 @@ class TestIncomingMessages:
         assert parse_response("not json{{{") is None
 
     def test_parse_result_without_text_field_returns_empty_string(self):
-        raw = json.dumps({"type": "result", "is_final": True})
+        raw = json.dumps({"mode": "2pass-offline"})
         result = parse_response(raw)
         assert result["text"] == ""

@@ -1,37 +1,71 @@
-"""FunASR WebSocket protocol — message encoding and decoding.
+"""FunASR runtime WebSocket protocol helpers."""
 
-Reference: FunASR runtime SDK WebSocket protocol.
-Outgoing: JSON messages with {type, action/data}.
-Incoming: JSON messages with {type, text, is_final}.
-"""
-
-import base64
 import json
 from typing import Any
 
 
-def encode_control_message(action: str) -> str:
-    """Encode a control message (start/stop) as a JSON string."""
-    return json.dumps({"type": "control", "action": action})
+def encode_start_message(
+    *,
+    sample_rate: int = 16000,
+    wav_name: str = "microphone",
+    mode: str = "2pass",
+) -> str:
+    """Encode the initial FunASR session config message."""
+    return json.dumps(
+        {
+            "mode": mode,
+            "chunk_size": [5, 10, 5],
+            "chunk_interval": 10,
+            "encoder_chunk_look_back": 4,
+            "decoder_chunk_look_back": 0,
+            "audio_fs": sample_rate,
+            "wav_name": wav_name,
+            "wav_format": "pcm",
+            "is_speaking": True,
+            "itn": True,
+        }
+    )
 
 
-def encode_audio_message(audio_bytes: bytes) -> str:
-    """Encode an audio chunk as a JSON string with base64-encoded data."""
-    data = base64.b64encode(audio_bytes).decode("ascii")
-    return json.dumps({"type": "audio", "data": data})
+def encode_stop_message() -> str:
+    """Encode the FunASR end-of-speech marker."""
+    return json.dumps({"is_speaking": False})
+
+
+def encode_control_message(action: str, *, sample_rate: int = 16000) -> str:
+    """Encode a start/stop control message."""
+    if action == "start":
+        return encode_start_message(sample_rate=sample_rate)
+    if action == "stop":
+        return encode_stop_message()
+    raise ValueError(f"unsupported control action: {action}")
+
+
+def encode_audio_message(audio_bytes: bytes) -> bytes:
+    """Return raw PCM bytes for a binary WebSocket frame."""
+    return audio_bytes
 
 
 def parse_response(raw: str) -> dict[str, Any] | None:
-    """Parse a raw WebSocket message into a result dict, or None if non-result."""
+    """Parse a raw FunASR response into a normalized result dict."""
     try:
         msg = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return None
-    if msg.get("type") != "result":
+
+    mode = msg.get("mode")
+    result_modes = {"online", "offline", "2pass-online", "2pass-offline"}
+    if "text" not in msg and mode not in result_modes:
         return None
+
+    is_final = msg.get("is_final")
+    if is_final is None:
+        is_final = mode in {"offline", "2pass-offline"}
+
     return {
         "text": msg.get("text", ""),
-        "is_final": msg.get("is_final", False),
+        "is_final": bool(is_final),
+        "mode": mode,
     }
 
 

@@ -45,7 +45,7 @@ class WaveformWidget(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)  # type: ignore[attr-defined]
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         w, h = self.width(), self.height()
         center_y = h // 2

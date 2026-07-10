@@ -2,7 +2,7 @@
 
 import logging
 
-from PySide6.QtCore import QObject, Signal, QUrl
+from PySide6.QtCore import QByteArray, QObject, Signal, QUrl
 from PySide6.QtNetwork import QAbstractSocket
 from PySide6.QtWebSockets import QWebSocket
 
@@ -38,10 +38,14 @@ class AsrClient(QObject):
         super().__init__(parent)
         self._ws: QWebSocket | None = None
         self._url = "ws://localhost:10095"
+        self._sample_rate = 16000
         self._accumulated_text = ""
 
     def set_url(self, url: str) -> None:
         self._url = url
+
+    def set_sample_rate(self, sample_rate: int) -> None:
+        self._sample_rate = sample_rate
 
     def connect_to_server(self) -> None:
         """Open WebSocket and perform FunASR handshake."""
@@ -63,13 +67,19 @@ class AsrClient(QObject):
 
     def send_audio(self, chunk: bytes) -> None:
         """Send a raw PCM audio chunk to the server."""
-        if self._ws and self._ws.state() == QAbstractSocket.ConnectedState:  # type: ignore[attr-defined]
+        if (
+            self._ws
+            and self._ws.state() == QAbstractSocket.SocketState.ConnectedState
+        ):
             msg = encode_audio_message(chunk)
-            self._ws.sendTextMessage(msg)
+            self._ws.sendBinaryMessage(QByteArray(msg))
 
     def send_stop(self) -> None:
         """Tell the server to finalize and return offline result."""
-        if self._ws and self._ws.state() == QAbstractSocket.ConnectedState:  # type: ignore[attr-defined]
+        if (
+            self._ws
+            and self._ws.state() == QAbstractSocket.SocketState.ConnectedState
+        ):
             msg = encode_control_message("stop")
             self._ws.sendTextMessage(msg)
 
@@ -79,7 +89,9 @@ class AsrClient(QObject):
         """Handshake: send start control message, then emit connected."""
         logger.info("WebSocket connected")
         if self._ws:
-            self._ws.sendTextMessage(encode_control_message("start"))
+            self._ws.sendTextMessage(
+                encode_control_message("start", sample_rate=self._sample_rate)
+            )
         self.connected.emit()
 
     def _on_disconnected(self) -> None:

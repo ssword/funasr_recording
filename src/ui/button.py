@@ -57,9 +57,9 @@ class NeonButton(QPushButton):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setFixedSize(_BUTTON_RADIUS * 2 + 40, _BUTTON_RADIUS * 2 + 40)
-        self.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         # Disable stylesheet background — we paint everything ourselves
-        self.setAttribute(Qt.WA_StyledBackground, False)  # type: ignore[attr-defined]
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self.setStyleSheet("background: transparent; border: none;")
 
         self._visual_state = ButtonVisualState.IDLE
@@ -113,7 +113,7 @@ class NeonButton(QPushButton):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)  # type: ignore[attr-defined]
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         w, h = self.width(), self.height()
         cx, cy = w / 2, h / 2
@@ -126,7 +126,7 @@ class NeonButton(QPushButton):
                               int(self._shockwave_alpha * 120))
             sw_pen = QPen(sw_color, _RING_WIDTH)
             painter.setPen(sw_pen)
-            painter.setBrush(Qt.NoBrush)  # type: ignore[attr-defined]
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(QPointF(cx, cy),
                                 self._shockwave_radius, self._shockwave_radius)
 
@@ -137,7 +137,7 @@ class NeonButton(QPushButton):
         glow_color = QColor(color.red(), color.green(), color.blue(), glow_alpha)
         glow_gradient.setColorAt(0, glow_color)
         glow_gradient.setColorAt(0.7, QColor(color.red(), color.green(), color.blue(), 0))
-        painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(glow_gradient))
         painter.drawEllipse(QPointF(cx, cy), radius + 20, radius + 20)
 
@@ -148,7 +148,7 @@ class NeonButton(QPushButton):
         body_gradient.setColorAt(0, QColor(35, 38, 42))
         body_gradient.setColorAt(1, body_base)
         painter.setBrush(QBrush(body_gradient))
-        painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(QPointF(cx, cy), radius, radius)
 
         # ── Flash overlay ──────────────────────────────────────────────
@@ -162,7 +162,7 @@ class NeonButton(QPushButton):
         ring_color = QColor(color.red(), color.green(), color.blue(), ring_alpha)
         ring_pen = QPen(ring_color, _RING_WIDTH)
         painter.setPen(ring_pen)
-        painter.setBrush(Qt.NoBrush)  # type: ignore[attr-defined]
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(QPointF(cx, cy), radius, radius)
 
         # ── Orbiting wisps ─────────────────────────────────────────────
@@ -172,16 +172,18 @@ class NeonButton(QPushButton):
             wy = cy + math.sin(angle) * (radius + 8)
             wisp_alpha = int(80 + pulse * 60)
             wisp_color = QColor(color.red(), color.green(), color.blue(), wisp_alpha)
-            painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(wisp_color)
             painter.drawEllipse(QPointF(wx, wy), 3, 3)
 
         # ── Text ───────────────────────────────────────────────────────
         text_color = QColor(220, 220, 220) if self._flash_alpha < 0.1 else QColor(30, 30, 30)
         painter.setPen(text_color)
-        font = QFont("Helvetica Neue", 12, QFont.Bold)  # type: ignore[attr-defined]
+        font = QFont("Helvetica Neue", 12, QFont.Weight.Bold)
         painter.setFont(font)
-        painter.drawText(QRectF(0, 0, w, h), Qt.AlignCenter, self.text())  # type: ignore[attr-defined]
+        painter.drawText(
+            QRectF(0, 0, w, h), Qt.AlignmentFlag.AlignCenter, self.text()
+        )
 
         painter.end()
 

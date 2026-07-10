@@ -66,8 +66,8 @@ class ParticleOverlay(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)  # type: ignore[attr-defined]
-        self.setAttribute(Qt.WA_TranslucentBackground)  # type: ignore[attr-defined]
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
         self.setStyleSheet("background: transparent;")
         self._particles: list[Particle] = []
@@ -99,12 +99,12 @@ class ParticleOverlay(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)  # type: ignore[attr-defined]
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         for p in self._particles:
             alpha = int(p.alpha * 255)
             color = QColor(0, 255, 136, alpha)
-            painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(color)
             # Draw as small luminous dot with soft gradient
             radius = p.size * 2

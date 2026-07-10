@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self._state_machine = StateMachine(self)
         self._asr_client = AsrClient(self)
         self._asr_client.set_url(self._config.ws_url)
+        self._asr_client.set_sample_rate(self._config.sample_rate)
 
         self._audio_thread = QThread(self)
         self._audio_worker = AudioWorker(self._config)
@@ -99,7 +100,7 @@ class MainWindow(QMainWindow):
 
         # Content container (positioned above particles in z-order)
         content = QWidget(central)
-        content.setAttribute(Qt.WA_TranslucentBackground)  # type: ignore[attr-defined]
+        content.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         content.setAutoFillBackground(False)
         content.setStyleSheet("background: transparent;")
         content_layout = QVBoxLayout(content)
@@ -108,7 +109,9 @@ class MainWindow(QMainWindow):
 
         # ── Waveform (top, largest area) ───────────────────────────────
         self._waveform = WaveformWidget()
-        self._waveform.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # type: ignore[attr-defined]
+        self._waveform.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._waveform.setMinimumHeight(220)
         content_layout.addWidget(self._waveform)
 
@@ -118,7 +121,7 @@ class MainWindow(QMainWindow):
         btn_container = QWidget()
         btn_container.setStyleSheet("background: transparent;")
         btn_layout = QVBoxLayout(btn_container)
-        btn_layout.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
+        btn_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._button = NeonButton()
         self._button.setText("录音")
         self._button.clicked.connect(self._on_button_clicked)
@@ -129,7 +132,9 @@ class MainWindow(QMainWindow):
 
         # ── Glass panel (bottom text area) ─────────────────────────────
         self._glass = GlassPanel()
-        self._glass.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # type: ignore[attr-defined]
+        self._glass.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._glass.setMinimumHeight(220)
         content_layout.addWidget(self._glass)
 
@@ -301,10 +306,10 @@ class MainWindow(QMainWindow):
                 self,
                 "确认退出",
                 "录音正在进行，确定退出吗？",
-                QMessageBox.Yes | QMessageBox.No,  # type: ignore[attr-defined]
-                QMessageBox.No,  # type: ignore[attr-defined]
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
             )
-            if reply == QMessageBox.No:  # type: ignore[attr-defined]
+            if reply == QMessageBox.StandardButton.No:
                 event.ignore()
                 return
 
